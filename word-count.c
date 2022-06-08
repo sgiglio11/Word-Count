@@ -579,9 +579,7 @@ void distributeData(DataDistribution * dataDistTemp, int nproc, int totalSize, i
 
         if(i != 0){
             strcpy(&(dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName]),&fileNames[currentFile * sizeFileName]);
-            printf("STO PASSANDO IL NOME DEL FILE: %s\n", &(dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName]));
             dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size] = sizeFiles[currentFile];
-            printf("STO PASSANDO LA SIZE DEL FILE: %d\n", dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size]);
             dataDistTemp[i].size += 1;
             if(sizeBlockLocal >= (sizeFiles[currentFile] - dataDistTemp[i].offset)){
                 sizeBlockLocal -= (sizeFiles[currentFile] - dataDistTemp[i].offset);
@@ -594,9 +592,7 @@ void distributeData(DataDistribution * dataDistTemp, int nproc, int totalSize, i
         if(flag){
             for(int j = currentFile; j < files; j++){
                 strcpy(&dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName],&fileNames[j * sizeFileName]);
-                printf("STO PASSANDO IL NOME DEL FILE: %s\n", &(dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName]));
                 dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size] = sizeFiles[j];
-                printf("STO PASSANDO LA SIZE DEL FILE: %d\n", dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size]);
                 dataDistTemp[i].size += 1;
                 if(sizeBlockLocal >= sizeFiles[j]){
                     sizeBlockLocal -= sizeFiles[j];

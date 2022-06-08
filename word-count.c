@@ -23,7 +23,7 @@
 #define FILE_NAME 30 //Serve per la massima lunghezza di una nome di un file
 #define WORD_LENGTH 20 //Serve per la massima lunghezza di una parola della hashtable
 #define MASTER 0 //Processo Master MPI
-#define NUMBER_OF_FILES 10 //Numero massimo di files (viene usato solo all'inizio perchè poi il tutto è gestito dinamicamente)
+#define NUMBER_OF_FILES 40 //Numero massimo di files (viene usato solo all'inizio perchè poi il tutto è gestito dinamicamente)
 #define DIRECTORY_SIZE 200 //Lunghezza massima della directory
 
 typedef struct ht_entry HashTableEntry;
@@ -90,6 +90,10 @@ void mergeSort(MergedHashTable* mergedTable, int l, int r);
 
 //------------------------------------------------------MAIN-------------------------------------------------------//
 int main(int argc, char * argv[]) {
+    int my_rank, nproc;
+    //--INIZIALIZZAZIONE MPI--//
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     // Hash Table che conterrà le coppie chiave-valore di ogni parola
     HashTable* counts = ht_create();
 
@@ -119,13 +123,8 @@ int main(int argc, char * argv[]) {
 
     //--VARIABILI MPI--//
     double start, end;
-    int my_rank, nproc;
     MPI_Request request = MPI_REQUEST_NULL;
     MPI_Status status;
-
-    //--INIZIALIZZAZIONE MPI--//
-    MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // Creo il datatype per la distribuzione dei dati
     MPI_Datatype MPI_DATA_DISTRIBUTION;
@@ -212,6 +211,8 @@ int main(int argc, char * argv[]) {
     //Effettuo la lettura dei file in parallelo
     for(int i = 0; i < dataDist.size; i++){
         strcpy(buffer,"");
+
+        // printf("[%s] - [%d]\n", &dataDist.fileNamesProcess[i * sizeFileName], dataDist.sizeFilesProcess[i]);
 
         char wordToAdd[SIZE];
         int j = 0;
@@ -378,7 +379,7 @@ int main(int argc, char * argv[]) {
 
     free(buffer);
 
-	MPI_Finalize();
+    MPI_Finalize();
     return 0;
 }
 
@@ -578,7 +579,9 @@ void distributeData(DataDistribution * dataDistTemp, int nproc, int totalSize, i
 
         if(i != 0){
             strcpy(&(dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName]),&fileNames[currentFile * sizeFileName]);
+            printf("STO PASSANDO IL NOME DEL FILE: %s\n", &(dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName]));
             dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size] = sizeFiles[currentFile];
+            printf("STO PASSANDO LA SIZE DEL FILE: %d\n", dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size]);
             dataDistTemp[i].size += 1;
             if(sizeBlockLocal >= (sizeFiles[currentFile] - dataDistTemp[i].offset)){
                 sizeBlockLocal -= (sizeFiles[currentFile] - dataDistTemp[i].offset);
@@ -591,7 +594,9 @@ void distributeData(DataDistribution * dataDistTemp, int nproc, int totalSize, i
         if(flag){
             for(int j = currentFile; j < files; j++){
                 strcpy(&dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName],&fileNames[j * sizeFileName]);
+                printf("STO PASSANDO IL NOME DEL FILE: %s\n", &(dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName]));
                 dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size] = sizeFiles[currentFile];
+                printf("STO PASSANDO LA SIZE DEL FILE: %d\n", dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size]);
                 dataDistTemp[i].size += 1;
                 if(sizeBlockLocal >= sizeFiles[j]){
                     sizeBlockLocal -= sizeFiles[j];

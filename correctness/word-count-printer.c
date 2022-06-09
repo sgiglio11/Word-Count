@@ -21,9 +21,9 @@
 #define FNV_PRIME 1099511628211UL //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define SIZE 4096 //Serve per la massima lunghezza di una riga in un file
 #define FILE_NAME 30 //Serve per la massima lunghezza di una nome di un file
-#define WORD_LENGTH 20 //Serve per la massima lunghezza di una parola della hashtable
+#define WORD_LENGTH 30 //Serve per la massima lunghezza di una parola della hashtable
 #define MASTER 0 //Processo Master MPI
-#define NUMBER_OF_FILES 40 //Numero massimo di files (viene usato solo all'inizio perchè poi il tutto è gestito dinamicamente)
+#define NUMBER_OF_FILES 30 //Numero massimo di files (viene usato solo all'inizio perchè poi il tutto è gestito dinamicamente)
 #define DIRECTORY_SIZE 200 //Lunghezza massima della directory
 
 typedef struct ht_entry HashTableEntry;
@@ -81,7 +81,6 @@ void exit_nomem(void);
 void distributeData(DataDistribution * dataDistTemp, int nproc, int totalSize, int files, int sizeFileName, char * fileNames, int * sizeFiles);
 int isChar(char c);
 void insertWord(HashTable* counts, char *temp, int countWord);
-
 //FUNZIONI DI MERGE
 MergedHashTable* merged_ht_create(int numEntries);
 void merged_ht_destroy(MergedHashTable* table);
@@ -90,10 +89,6 @@ void mergeSort(MergedHashTable* mergedTable, int l, int r);
 
 //------------------------------------------------------MAIN-------------------------------------------------------//
 int main(int argc, char * argv[]) {
-    int my_rank, nproc;
-    //--INIZIALIZZAZIONE MPI--//
-    MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     // Hash Table che conterrà le coppie chiave-valore di ogni parola
     HashTable* counts = ht_create();
 
@@ -123,8 +118,13 @@ int main(int argc, char * argv[]) {
 
     //--VARIABILI MPI--//
     double start, end;
+    int my_rank, nproc;
     MPI_Request request = MPI_REQUEST_NULL;
     MPI_Status status;
+
+    //--INIZIALIZZAZIONE MPI--//
+    MPI_Init(&argc, &argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
 
     // Creo il datatype per la distribuzione dei dati
     MPI_Datatype MPI_DATA_DISTRIBUTION;
@@ -147,9 +147,6 @@ int main(int argc, char * argv[]) {
     MPI_Type_commit(&MPI_DATA_DISTRIBUTION);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-    //Inizio a contare il tempo
-    start = MPI_Wtime();
 
     //Prendiamo la directory della cartella contenente i file
     strcat(getcwd(cwd, sizeof(cwd)), "/fileList");
@@ -184,6 +181,7 @@ int main(int argc, char * argv[]) {
 
                 strcpy(&fileNames[(files-1) * sizeFileName], strcat(in_file->d_name, "\0"));
                 sizeFiles[files-1] = fileStats.st_size;
+
                 totalSize += fileStats.st_size;
             }
 
@@ -273,20 +271,19 @@ int main(int argc, char * argv[]) {
                 j = 0;
             }
         }
+        fclose(fp);
     }
     
     //Per MPI_Pack
-    int wordLength = WORD_LENGTH;
-
-    int sizeDataToPack = sizeof(int) + (((sizeof(char) * wordLength) + sizeof(int)) * counts->length);
-    int countDataToPack = 4 + ((wordLength + 4) * counts->length);
+    int sizeDataToPack = sizeof(int) + (((sizeof(char) * WORD_LENGTH) + sizeof(int)) * counts->length);
+    int countDataToPack = 4 + ((WORD_LENGTH + 4) * counts->length);
     int position = 0;
     char * sendHashTable = malloc(sizeDataToPack);
     int sizeDataToReceive;
     HashTableIterator it = ht_iterator(counts);
 
     //Per Gatherv
-    int numElement = counts->length * (wordLength + 4) + 4;
+    int numElement = counts->length * (WORD_LENGTH + 4) + 4;
     int * countsElement;
     int * displacementsElement;
     char * htsReceived;
@@ -319,10 +316,10 @@ int main(int argc, char * argv[]) {
         for(int i = 0; i < length; i++){
             ht_next(&it);
             int countWord = *((int*) it.value);
-            char key[wordLength];
+            char key[WORD_LENGTH];
             strcpy(key, it.key);
 
-            MPI_Pack(key, wordLength, MPI_CHAR, sendHashTable, sizeDataToPack, &position, MPI_COMM_WORLD);
+            MPI_Pack(key, WORD_LENGTH, MPI_CHAR, sendHashTable, sizeDataToPack, &position, MPI_COMM_WORLD);
             MPI_Pack(&countWord, 1, MPI_INT, sendHashTable, sizeDataToPack, &position, MPI_COMM_WORLD);
         }
     }
@@ -335,9 +332,9 @@ int main(int argc, char * argv[]) {
             position = 0;
             MPI_Unpack(&htsReceived[displacementsElement[i]], countsElement[i], &position, &numEntries, 1, MPI_INT, MPI_COMM_WORLD);
             int countWord;
-            char temp[wordLength];
+            char temp[WORD_LENGTH];
             for(int j = 0; j < numEntries; j++){
-                MPI_Unpack(&htsReceived[displacementsElement[i]], countsElement[i], &position, temp, wordLength, MPI_CHAR, MPI_COMM_WORLD);
+                MPI_Unpack(&htsReceived[displacementsElement[i]], countsElement[i], &position, temp, WORD_LENGTH, MPI_CHAR, MPI_COMM_WORLD);
                 MPI_Unpack(&htsReceived[displacementsElement[i]], countsElement[i], &position, &countWord, 1, MPI_INT, MPI_COMM_WORLD);
                 insertWord(counts,temp,countWord);
             }
@@ -361,7 +358,26 @@ int main(int argc, char * argv[]) {
         }
 
         // Effettuo l'ordinamento
-        mergeSort(mergedTable, 0, numEntries - 1);
+        mergeSort(mergedTable, 0, numEntries - 1);        
+
+        // Prendo la directory nella quale verrà stampato l'output
+        strcpy(cwd, "");
+        strcat(getcwd(cwd, sizeof(cwd)), "/");
+        strcat(cwd, argv[1]);
+
+        // Apro il file per scriverci dentro
+        if (!(fp = fopen(cwd, "w"))) {
+            fprintf(stderr, "Error: Failed to open entry file - %s\n", strerror(errno));
+            fclose(fp);
+            return 1;
+        }
+
+        // Viene scritto l'output in un file
+        fprintf(fp, "PAROLA,FREQUENZA\n");
+        for(int i = 0; i < numEntries; i++)
+            fprintf(fp,"%s,%d\n", mergedTable[i].word, mergedTable[i].frequencies);
+
+        fclose(fp);
 
         free(countsElement);
         free(displacementsElement);
@@ -369,19 +385,12 @@ int main(int argc, char * argv[]) {
         merged_ht_destroy(mergedTable);
     }
 
-    // Finisco di contare il tempo
-    end = MPI_Wtime() - start;
-
-    if(my_rank == MASTER){
-        printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nTempo calcolo locale: % lf\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", end);
-    }
-
     ht_destroy(counts);
 
     free(sendHashTable);
     free(buffer);
 
-    MPI_Finalize();
+	MPI_Finalize();
     return 0;
 }
 
@@ -594,7 +603,7 @@ void distributeData(DataDistribution * dataDistTemp, int nproc, int totalSize, i
         if(flag){
             for(int j = currentFile; j < files; j++){
                 strcpy(&dataDistTemp[i].fileNamesProcess[dataDistTemp[i].size * sizeFileName],&fileNames[j * sizeFileName]);
-                dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size] = sizeFiles[j];
+                dataDistTemp[i].sizeFilesProcess[dataDistTemp[i].size] = sizeFiles[currentFile];
                 dataDistTemp[i].size += 1;
                 if(sizeBlockLocal >= sizeFiles[j]){
                     sizeBlockLocal -= sizeFiles[j];

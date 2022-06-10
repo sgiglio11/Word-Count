@@ -541,5 +541,6 @@ Il seguente grafico riporta il test della <code>Weak Scalability</code> il quale
 Come possiamo notare, i tempi si scostano poco tra loro, di conseguenza possiamo notare che l'algoritmo scala abbastanza bene quando il workload aumenta in modo proporzionale al numero di processi utilizzati.
 
 # Conclusioni
-Per concludere, l'algoritmo sfrutta sicuramente i vantaggi della parallelizzazione, ma non perfettamente. L'overhead introdotto dalle comunicazioni tra processi, comporta comunque un notevole calo delle prestazioni.
-Nonostante ciò, il progetto ha aiutato a comprendere quanto sia importante la programmazione concorrente tra processi e i vantaggi che si possono ottenere da quest'ultima, il che risulta essere una cosa non da poco.
+L'implementazione in parallelo tramite MPI ha permesso sicuramente di velocizzare l'esecuzione dell'algoritmo; lo speed up però è lontano da quello ideale a causa della distribuzione del lavoro e dell'ordinamento che viene effettuato solo dal processo MASTER.
+Inoltre, l'overhead introdotto dalle comunicazioni tra processi, comporta comunque un calo delle prestazioni, anche se è stato minimizzato il numero di comunicazioni. Per terminare, di sicuro un'implementazione in parallelo del *mergeSort* sarebbe stata più efficiente.
+Infine, lo svolgimento di questo progetto ha permesso di toccare con mano le problematiche sulla coordinazione dei dati tra diversi processi in problemi non "embarassely parallels".

@@ -543,4 +543,4 @@ Come possiamo notare, i tempi si scostano poco tra loro, di conseguenza possiamo
 # Conclusioni
 L'implementazione in parallelo tramite MPI ha permesso sicuramente di velocizzare l'esecuzione dell'algoritmo; lo speed up però è lontano da quello ideale a causa della distribuzione del lavoro e dell'ordinamento che viene effettuato solo dal processo MASTER.
 Inoltre, l'overhead introdotto dalle comunicazioni tra processi, comporta comunque un calo delle prestazioni, anche se è stato minimizzato il numero di comunicazioni. Per terminare, di sicuro un'implementazione in parallelo del *mergeSort* sarebbe stata più efficiente.
-Infine, lo svolgimento di questo progetto ha permesso di toccare con mano le problematiche sulla coordinazione dei dati tra diversi processi in problemi non "embarassely parallels".
+Infine, lo svolgimento di questo progetto ha permesso di toccare con mano le problematiche sulla coordinazione dei dati tra diversi processi in problemi non "embarassingly parallels".
